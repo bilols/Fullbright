@@ -1,6 +1,6 @@
 # Fullbright MCP
 
-This is a fork of graysonchalmers/Tool-MaterialMaker-MCP
+This is a fork of [graysonchalmers/Tool-MaterialMaker-MCP](https://github.com/graysonchalmers/Tool-MaterialMaker-MCP).
 
 > Part of [gProdDevKit](https://kit.graysonchalmers.com), Grayson Chalmers' game production / dev kit.
 
