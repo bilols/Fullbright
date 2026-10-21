@@ -104,3 +104,40 @@ def test_render_retro_bakes_full_size_then_processes(tmp_path):
     r = tools.render_retro(fake_render, str(tmp_path), {}, basename="m", size=16,
                            targets="godot")
     assert seen["size"] == 2048 and r["ok"] and r["source_images"] == ["a"]
+
+
+def test_dither_recovers_a_color_the_palette_lacks():
+    # Muted olive (113,108,77): plain snapping lands on a pinkish brown,
+    # error diffusion should average back to roughly the source.
+    pal = retro.Palette.load("quake")
+    src = np.broadcast_to(np.array([113, 108, 77], np.float32) / 255, (32, 32, 3)).copy()
+    snapped = pal.snap(src, pal.normal_idx).reshape(-1, 3).mean(0) * 255
+    dithered = pal.dither(src, pal.normal_idx, strength=1.0).reshape(-1, 3).mean(0) * 255
+    target = np.array([113, 108, 77])
+    assert np.abs(dithered - target).max() < np.abs(snapped - target).max()
+    assert np.abs(dithered - target).max() < 6
+
+
+def test_dither_stays_in_allowed_colors(tmp_path):
+    em = np.zeros((64, 64, 3), np.uint8)
+    em[32:, 32:] = (255, 200, 80)
+    _material(tmp_path, emission=em)
+    r = retro.process(tmp_path, "m", size=16, targets=("godot",), dither=0.8)
+    pal = _palette()
+    fb = {pal["colors"][i] for i in pal["fullbright"]}
+    alb = np.asarray(Image.open(tmp_path / "retro/m/godot/m_albedo.png"))
+    lit = alb[8:, 8:, :3].reshape(-1, 3)
+    unlit = alb[:8, 8:, :3].reshape(-1, 3)
+    assert {"%02x%02x%02x" % tuple(p) for p in lit} <= fb
+    assert not ({"%02x%02x%02x" % tuple(p) for p in unlit} & fb)
+    assert r["fullbright_pixels"] == 64
+
+
+def test_source_gamma_brightens_before_snap(tmp_path):
+    _material(tmp_path)
+    plain = retro.process(tmp_path, "m", size=16, targets=("godot",), out_dir=tmp_path / "a")
+    lifted = retro.process(tmp_path, "m", size=16, targets=("godot",), out_dir=tmp_path / "b",
+                           source_gamma=1.5)
+    a = np.asarray(Image.open(tmp_path / "a/godot/m_albedo.png"))[..., :3].astype(int).sum()
+    b = np.asarray(Image.open(tmp_path / "b/godot/m_albedo.png"))[..., :3].astype(int).sum()
+    assert plain["ok"] and lifted["ok"] and b > a

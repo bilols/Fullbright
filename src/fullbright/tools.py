@@ -21,7 +21,8 @@ def _targets(targets: str) -> tuple:
 def retro_process(output_dir: str, basename: str, size: int = 256,
                   palette: str = "quake", targets: str = DEFAULT_TARGETS,
                   emission_threshold: float = 0.1, roughness_levels: int = 8,
-                  normal_strength: float = 1.0) -> dict:
+                  normal_strength: float = 1.0, dither: float = 0.0,
+                  source_gamma: float = 1.0) -> dict:
     """Turn already-rendered Material Maker maps into retro, palette-locked
     textures packed per engine.
 
@@ -36,6 +37,13 @@ def retro_process(output_dir: str, basename: str, size: int = 256,
       snapped albedo there and black elsewhere. Alpha becomes a hard cutout.
     - Roughness is quantized to `roughness_levels` steps (0 disables);
       `normal_strength` scales the normal map's tilt before renormalizing.
+    - dither: error-diffusion strength (0 = off). Use about 0.8 when the
+      palette lacks the source's color (muted olives, warm grays) and the
+      surface is grainy enough to hide the pattern (concrete, rock, dirt).
+      Leave it off for smooth or painted surfaces.
+    - source_gamma: Levels-style gamma applied to the albedo before the
+      snap (>1 brightens midtones), for source images that came out too
+      dark. 1.0 = untouched.
     - targets: comma list of godot, unity_urp, blender.
 
     Writes to `<output_dir>/retro/<basename>/<target>/` and a 2x
@@ -52,7 +60,8 @@ def retro_process(output_dir: str, basename: str, size: int = 256,
                              targets=_targets(targets),
                              emission_threshold=emission_threshold,
                              roughness_levels=roughness_levels,
-                             normal_strength=normal_strength)
+                             normal_strength=normal_strength,
+                             dither=dither, source_gamma=source_gamma)
     except (OSError, ValueError, KeyError) as exc:
         return {"ok": False, "error": str(exc)}
 
@@ -60,14 +69,16 @@ def retro_process(output_dir: str, basename: str, size: int = 256,
 def render_retro(render_graph, output_dir: str, ptex: dict, basename: str = "material",
                  size: int = 256, palette: str = "quake", targets: str = DEFAULT_TARGETS,
                  emission_threshold: float = 0.1, roughness_levels: int = 8,
-                 normal_strength: float = 1.0) -> dict:
+                 normal_strength: float = 1.0, dither: float = 0.0,
+                 source_gamma: float = 1.0) -> dict:
     """render_graph at the full 2048 bake, then retro_process the result."""
     r = render_graph(ptex, size=2048, basename=basename, target="Godot/Godot 4 Standard")
     if not r.get("ok"):
         return {"ok": False, "stage": "render", **r}
     out = retro_process(output_dir, basename, size=size, palette=palette, targets=targets,
                         emission_threshold=emission_threshold,
-                        roughness_levels=roughness_levels, normal_strength=normal_strength)
+                        roughness_levels=roughness_levels, normal_strength=normal_strength,
+                        dither=dither, source_gamma=source_gamma)
     out["source_images"] = r["images"]
     if not out.get("ok"):
         out["stage"] = "retro"
