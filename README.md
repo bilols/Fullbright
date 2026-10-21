@@ -279,7 +279,7 @@ but is not the right default for every client.
 
 ## Tools
 
-The server exposes 11 batch-mode tools and two resources (plus 7 more in Live mode, below):
+The server exposes 13 batch-mode tools and two resources (plus 7 more in Live mode, below):
 
 | Tool | What it does |
 |---|---|
@@ -294,6 +294,8 @@ The server exposes 11 batch-mode tools and two resources (plus 7 more in Live mo
 | `list_examples` | List starting graphs from both sources: Material Maker's bundled examples and this repo's `cookbook/` (filter with `source`) |
 | `load_example` | Load one starting graph by name as a `.ptex` (cookbook first, then bundled) |
 | `inspect_project` | Read-only metrics for a `.ptex` on disk (hash, node/connection counts, type histogram, material outputs) |
+| `retro_process` | Fullbright: turn already-rendered 2048 maps into palette-locked retro textures (box downscale, palette snap, fullbright emission, cutout alpha) packed for Godot, Unity URP and Blender |
+| `render_retro` | Fullbright: `render_graph` at the full bake, then `retro_process`, in one call |
 
 Resource `catalog://nodes` exposes the full node catalog. Resource
 `guide://authoring` exposes the authoring guide (the invariants; see

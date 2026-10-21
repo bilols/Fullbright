@@ -108,6 +108,8 @@ _ALL_TOOL_NAMES = [
     "live_render_node_output",
     "live_clear",
     "live_load",
+    "retro_process",
+    "render_retro",
 ]
 
 
@@ -192,6 +194,10 @@ def test_every_registered_tool_touches_idle_watchdog(monkeypatch, tmp_path):
         "live_clear": lambda: _expect_sentinel(server.live_clear),
         "live_load": lambda: _expect_sentinel(
             server.live_load, {"nodes": [], "connections": []}),
+        # No maps on disk for this basename: returns an error as data.
+        "retro_process": lambda: server.retro_process("not_a_real_material"),
+        # Invalid node type fails validation before render() is reached.
+        "render_retro": lambda: server.render_retro(invalid_ptex),
     }
 
     assert set(calls) == set(_ALL_TOOL_NAMES), (
