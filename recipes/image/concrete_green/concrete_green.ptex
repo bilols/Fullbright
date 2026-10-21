@@ -1,0 +1,237 @@
+{
+ "connections": [
+  {
+   "from": "Source",
+   "from_port": 0,
+   "to": "Material",
+   "to_port": 0
+  },
+  {
+   "from": "Source",
+   "from_port": 0,
+   "to": "CrackHeight",
+   "to_port": 0
+  },
+  {
+   "from": "CrackHeight",
+   "from_port": 0,
+   "to": "CrackSoften",
+   "to_port": 0
+  },
+  {
+   "from": "CrackSoften",
+   "from_port": 0,
+   "to": "CrackNormal",
+   "to_port": 0
+  },
+  {
+   "from": "CrackNormal",
+   "from_port": 0,
+   "to": "Material",
+   "to_port": 4
+  },
+  {
+   "from": "Source",
+   "from_port": 0,
+   "to": "Roughness",
+   "to_port": 0
+  },
+  {
+   "from": "Roughness",
+   "from_port": 0,
+   "to": "Material",
+   "to_port": 2
+  },
+  {
+   "from": "CrackSoften",
+   "from_port": 0,
+   "to": "CrackAO",
+   "to_port": 0
+  },
+  {
+   "from": "CrackAO",
+   "from_port": 0,
+   "to": "Material",
+   "to_port": 5
+  }
+ ],
+ "name": "concrete_green",
+ "node_position": {
+  "x": 0,
+  "y": 0
+ },
+ "nodes": [
+  {
+   "name": "Material",
+   "node_position": {
+    "x": 1100,
+    "y": 200
+   },
+   "parameters": {
+    "albedo_color": {
+     "a": 1,
+     "b": 1,
+     "g": 1,
+     "r": 1,
+     "type": "Color"
+    },
+    "ao_light_affect": 1,
+    "depth_scale": 1,
+    "emission_energy": 1,
+    "metallic": 0,
+    "normal_scale": 1,
+    "resolution": 1,
+    "roughness": 1,
+    "size": 11,
+    "subsurf_scatter_strength": 0
+   },
+   "type": "material"
+  },
+  {
+   "name": "Source",
+   "node_position": {
+    "x": 0,
+    "y": 200
+   },
+   "parameters": {
+    "image": "C:/Dev/MaterialGenerator/sources/concrete_green.png"
+   },
+   "type": "image"
+  },
+  {
+   "name": "CrackHeight",
+   "node_position": {
+    "x": 300,
+    "y": 350
+   },
+   "parameters": {
+    "gradient": {
+     "interpolation": 1,
+     "points": [
+      {
+       "a": 1,
+       "b": 0,
+       "g": 0,
+       "pos": 0,
+       "r": 0
+      },
+      {
+       "a": 1,
+       "b": 0,
+       "g": 0,
+       "pos": 0.22,
+       "r": 0
+      },
+      {
+       "a": 1,
+       "b": 1,
+       "g": 1,
+       "pos": 0.32,
+       "r": 1
+      },
+      {
+       "a": 1,
+       "b": 1,
+       "g": 1,
+       "pos": 1,
+       "r": 1
+      }
+     ],
+     "type": "Gradient"
+    }
+   },
+   "type": "colorize"
+  },
+  {
+   "name": "CrackSoften",
+   "node_position": {
+    "x": 550,
+    "y": 350
+   },
+   "parameters": {
+    "param0": 11,
+    "param1": 4,
+    "param2": 1,
+    "param3": 1
+   },
+   "type": "fast_blur"
+  },
+  {
+   "name": "CrackNormal",
+   "node_position": {
+    "x": 800,
+    "y": 350
+   },
+   "parameters": {
+    "param0": 11,
+    "param1": 1,
+    "param2": 0,
+    "param3": 0,
+    "param4": 0
+   },
+   "type": "normal_map"
+  },
+  {
+   "name": "Roughness",
+   "node_position": {
+    "x": 300,
+    "y": 150
+   },
+   "parameters": {
+    "gradient": {
+     "interpolation": 1,
+     "points": [
+      {
+       "a": 1,
+       "b": 0.95,
+       "g": 0.95,
+       "pos": 0,
+       "r": 0.95
+      },
+      {
+       "a": 1,
+       "b": 0.75,
+       "g": 0.75,
+       "pos": 1,
+       "r": 0.75
+      }
+     ],
+     "type": "Gradient"
+    }
+   },
+   "type": "colorize"
+  },
+  {
+   "name": "CrackAO",
+   "node_position": {
+    "x": 800,
+    "y": 500
+   },
+   "parameters": {
+    "gradient": {
+     "interpolation": 1,
+     "points": [
+      {
+       "a": 1,
+       "b": 0.4,
+       "g": 0.4,
+       "pos": 0,
+       "r": 0.4
+      },
+      {
+       "a": 1,
+       "b": 1,
+       "g": 1,
+       "pos": 1,
+       "r": 1
+      }
+     ],
+     "type": "Gradient"
+    }
+   },
+   "type": "colorize"
+  }
+ ],
+ "parameters": {},
+ "type": "graph"
+}
