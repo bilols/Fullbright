@@ -614,13 +614,15 @@ def live_load(graph: dict | None = None, path: str | None = None) -> dict:
 def retro_process(basename: str, size: int = 256, palette: str = "quake",
                   targets: str = fb_tools.DEFAULT_TARGETS,
                   emission_threshold: float = 0.1, roughness_levels: int = 8,
-                  normal_strength: float = 1.0) -> dict:
+                  normal_strength: float = 1.0, dither: float = 0.0,
+                  source_gamma: float = 1.0) -> dict:
     cfg, _ = _ensure_ready()
     return fb_tools.retro_process(os.path.abspath(cfg.output_dir), basename, size=size,
                                   palette=palette, targets=targets,
                                   emission_threshold=emission_threshold,
                                   roughness_levels=roughness_levels,
-                                  normal_strength=normal_strength)
+                                  normal_strength=normal_strength,
+                                  dither=dither, source_gamma=source_gamma)
 
 
 retro_process.__doc__ = (fb_tools.retro_process.__doc__.replace(
@@ -631,10 +633,12 @@ retro_process.__doc__ = (fb_tools.retro_process.__doc__.replace(
 def render_retro(ptex: dict, basename: str = "material", size: int = 256,
                  palette: str = "quake", targets: str = fb_tools.DEFAULT_TARGETS,
                  emission_threshold: float = 0.1, roughness_levels: int = 8,
-                 normal_strength: float = 1.0) -> dict:
+                 normal_strength: float = 1.0, dither: float = 0.0,
+                 source_gamma: float = 1.0) -> dict:
     """One call from graph to retro textures: render_graph at the full 2048
     bake (validating first, same as render_graph), then retro_process the
-    maps down to `size` with the given palette.
+    maps down to `size` with the given palette. dither and source_gamma
+    work as described on retro_process.
 
     Use this as the default render for retro work; the plain render_graph
     smooths with Lanczos when asked for a small size. Wire anything that
@@ -648,7 +652,8 @@ def render_retro(ptex: dict, basename: str = "material", size: int = 256,
                                  basename=basename, size=size, palette=palette,
                                  targets=targets, emission_threshold=emission_threshold,
                                  roughness_levels=roughness_levels,
-                                 normal_strength=normal_strength)
+                                 normal_strength=normal_strength,
+                                 dither=dither, source_gamma=source_gamma)
 
 
 # Register the plain functions as MCP tools.

@@ -18,6 +18,8 @@ Albedo rules:
   weren't held back, ordinary orange brick or yellow paint would grab Quake's
   glowing fire colors and light up in the engine.
 - Alpha is kept, but snapped to fully on or fully off (cutout).
+- Optional: `dither` (error diffusion, for colors the palette lacks) and
+  `source_gamma` (Levels-style lift for sources that came out too dark).
 
 Emission comes for free: it's the albedo wherever a fullbright color landed,
 black everywhere else.
@@ -73,6 +75,36 @@ class Palette:
             out[s:s + 65536] = allowed[d.argmin(1)]
         return self.rgb[out].reshape(rgb.shape)
 
+    def dither(self, rgb: np.ndarray, allowed: np.ndarray, strength: float = 0.8) -> np.ndarray:
+        """Like snap, but with serpentine Floyd-Steinberg error diffusion in
+        OKLab, so mixes of nearby palette colors average out to colors the
+        palette doesn't have (muted olives, warm grays). strength scales the
+        diffused error: 1.0 is classic Floyd-Steinberg, lower is calmer.
+        Reads as grit on rough surfaces; leave it off for smooth ones."""
+        h, w = rgb.shape[:2]
+        lab = _oklab(rgb.reshape(-1, 3)).reshape(h, w, 3).astype(np.float64)
+        cand = self.lab[allowed].astype(np.float64)
+        out = np.empty((h, w), dtype=np.int64)
+        for y in range(h):
+            xs = range(w) if y % 2 == 0 else range(w - 1, -1, -1)
+            step = 1 if y % 2 == 0 else -1
+            for x in xs:
+                v = lab[y, x]
+                k = int(((cand - v) ** 2).sum(1).argmin())
+                out[y, x] = k
+                e = (v - cand[k]) * strength
+                nx = x + step
+                if 0 <= nx < w:
+                    lab[y, nx] += e * (7 / 16)
+                if y + 1 < h:
+                    px = x - step
+                    if 0 <= px < w:
+                        lab[y + 1, px] += e * (3 / 16)
+                    lab[y + 1, x] += e * (5 / 16)
+                    if 0 <= nx < w:
+                        lab[y + 1, nx] += e * (1 / 16)
+        return self.rgb[allowed[out]]
+
 
 def _srgb_to_linear(c):
     return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
@@ -120,13 +152,17 @@ def _quantize(a, levels):
 
 def process(src_dir, basename, size=256, palette="quake", out_dir=None,
             targets=("godot", "unity_urp", "blender"), emission_threshold=0.1,
-            alpha_threshold=0.5, roughness_levels=8, normal_strength=1.0):
+            alpha_threshold=0.5, roughness_levels=8, normal_strength=1.0,
+            dither=0.0, source_gamma=1.0):
     src = Path(src_dir)
     pal = Palette.load(palette)
     out = Path(out_dir or src / "retro" / basename)
 
     alb = _box(_load(src / f"{basename}_albedo.png", "RGBA"), size)
     rgb, alpha = alb[..., :3], alb[..., 3]
+    if source_gamma != 1.0:
+        # Photoshop Levels convention: gamma > 1 lifts the midtones.
+        rgb = np.clip(rgb, 0, 1) ** (1.0 / source_gamma)
 
     em_path = src / f"{basename}_emission.png"
     if em_path.exists():
@@ -135,7 +171,10 @@ def process(src_dir, basename, size=256, palette="quake", out_dir=None,
     else:
         lit = np.zeros(rgb.shape[:2], bool)
 
-    snapped = pal.snap(rgb, pal.normal_idx)
+    if dither > 0:
+        snapped = pal.dither(rgb, pal.normal_idx, strength=dither)
+    else:
+        snapped = pal.snap(rgb, pal.normal_idx)
     if lit.any() and len(pal.fb_idx):
         # glowing pixels take the emission map's color, snapped to fullbrights
         snapped[lit] = pal.snap(em[lit], pal.fb_idx)
@@ -200,8 +239,13 @@ def main(argv=None):
     ap.add_argument("--palette", default="quake")
     ap.add_argument("--out")
     ap.add_argument("--targets", default="godot,unity_urp,blender")
+    ap.add_argument("--dither", type=float, default=0.0,
+                    help="error-diffusion strength, 0 = off, 0.8 = good for grainy surfaces")
+    ap.add_argument("--source-gamma", type=float, default=1.0,
+                    help="Levels-style gamma applied to albedo before the palette snap")
     a = ap.parse_args(argv)
-    r = process(a.src_dir, a.basename, a.size, a.palette, a.out, tuple(a.targets.split(",")))
+    r = process(a.src_dir, a.basename, a.size, a.palette, a.out, tuple(a.targets.split(",")),
+                dither=a.dither, source_gamma=a.source_gamma)
     print(json.dumps(r, indent=1))
 
 
