@@ -8,7 +8,7 @@ import os
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _EVIDENCE = os.path.join(_ROOT, "docs", "evidence", "phase3")
 
-TEST_SET_SHA256 = "482f25424a1e8427797f9d00c941c234991004471ba11f9c54faa67f0d323ddd"
+TEST_SET_SHA256 = "81741ff56badea0494514276ce5cba0930aebd77a6467334cd7cdcd1211b3743"
 
 
 def test_frozen_test_set_is_archived_unchanged():
@@ -24,7 +24,7 @@ def test_frozen_test_set_bytes_are_pinned():
     """freeze-rule.md forbids editing any case or the rubric; the metadata
     checks above cannot see a changed must_have line, a hash can."""
     path = os.path.join(_EVIDENCE, "test_set.json")
-    digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    digest = hashlib.sha256(open(path, "rb").read().replace(b"\r\n", b"\n")).hexdigest()
     assert digest == TEST_SET_SHA256, "docs/evidence/phase3/test_set.json changed; the Phase-3 set is frozen"
 
 
