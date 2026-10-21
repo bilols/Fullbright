@@ -83,3 +83,25 @@ def render_retro(render_graph, output_dir: str, ptex: dict, basename: str = "mat
     if not out.get("ok"):
         out["stage"] = "retro"
     return out
+
+
+def make_seamless(path: str, out_path: str = "", band: float = 0.15) -> dict:
+    """Make a source image tile seamlessly before using it in a graph's
+    `image` node.
+
+    Half-offset crossfade: edges wrap cleanly, the center stays untouched,
+    and the only cost is faint ghosting within `band` (fraction of each
+    side, default 0.15) of the borders. Keeps continuous lines across the
+    seam, which Material Maker's make_tileable node blurs and doubles.
+
+    Writes to `out_path`, or by default `<source dir>/tiled/<name>.png`
+    (anything after the first dot is dropped, so `waterblu1.gen.png`
+    becomes `tiled/waterblu1.png`). Returns {ok, path, seam_before,
+    seam_after}; the seam numbers are the jump across the wrap edges
+    relative to ordinary neighbouring pixels, so about 1.0 means invisible.
+    """
+    from fullbright import seamless
+    try:
+        return seamless.make_seamless(path, out_path or None, band)
+    except (OSError, ValueError) as exc:
+        return {"ok": False, "error": str(exc)}

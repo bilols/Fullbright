@@ -110,6 +110,7 @@ _ALL_TOOL_NAMES = [
     "live_load",
     "retro_process",
     "render_retro",
+    "make_seamless",
 ]
 
 
@@ -198,6 +199,8 @@ def test_every_registered_tool_touches_idle_watchdog(monkeypatch, tmp_path):
         "retro_process": lambda: server.retro_process("not_a_real_material"),
         # Invalid node type fails validation before render() is reached.
         "render_retro": lambda: server.render_retro(invalid_ptex),
+        # Missing file: returns an error as data.
+        "make_seamless": lambda: server.make_seamless(str(tmp_path / "missing.png")),
     }
 
     assert set(calls) == set(_ALL_TOOL_NAMES), (

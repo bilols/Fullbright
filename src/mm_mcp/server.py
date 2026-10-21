@@ -656,6 +656,21 @@ def render_retro(ptex: dict, basename: str = "material", size: int = 256,
                                  dither=dither, source_gamma=source_gamma)
 
 
+def make_seamless(path: str, out_path: str = "", band: float = 0.15) -> dict:
+    _touch_idle()
+    try:
+        roots = load_config().allowed_roots
+        ensure_within_roots(path, roots)
+        if out_path:
+            ensure_within_roots(out_path, roots)
+    except PathNotAllowed as exc:
+        return {"ok": False, "error": str(exc)}
+    return fb_tools.make_seamless(path, out_path, band)
+
+
+make_seamless.__doc__ = fb_tools.make_seamless.__doc__
+
+
 # Register the plain functions as MCP tools.
 mcp.tool()(list_node_types)
 mcp.tool()(describe_node)
@@ -677,6 +692,7 @@ mcp.tool()(live_clear)
 mcp.tool()(live_load)
 mcp.tool()(retro_process)
 mcp.tool()(render_retro)
+mcp.tool()(make_seamless)
 
 
 @mcp.resource("catalog://nodes")
