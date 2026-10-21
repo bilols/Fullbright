@@ -76,3 +76,31 @@ def test_engine_packing(tmp_path):
     assert ms[0, 0, 0] == 0 and ms[0, 0, 3] == 109  # smoothness = 1 - 4/7
     for f in ("roughness", "metallic", "ao", "normal", "albedo", "emission"):
         assert (base / f"blender/m_{f}.png").exists()
+
+
+def test_tool_rejects_bad_input(tmp_path):
+    from fullbright import tools
+    assert tools.retro_process(str(tmp_path), "m", size=8)["ok"] is False
+    assert tools.retro_process(str(tmp_path), "../m")["ok"] is False
+    assert "unknown target" in tools.retro_process(str(tmp_path), "m", targets="unreal")["error"]
+    assert tools.retro_process(str(tmp_path), "missing")["ok"] is False  # no maps on disk
+
+
+def test_render_retro_reports_render_failure(tmp_path):
+    from fullbright import tools
+    def fake_render(ptex, **kw):
+        return {"ok": False, "images": [], "error": "boom"}
+    r = tools.render_retro(fake_render, str(tmp_path), {})
+    assert r == {"ok": False, "stage": "render", "images": [], "error": "boom"}
+
+
+def test_render_retro_bakes_full_size_then_processes(tmp_path):
+    from fullbright import tools
+    seen = {}
+    def fake_render(ptex, size, basename, target):
+        seen["size"] = size
+        _material(tmp_path)
+        return {"ok": True, "images": ["a"], "error": None}
+    r = tools.render_retro(fake_render, str(tmp_path), {}, basename="m", size=16,
+                           targets="godot")
+    assert seen["size"] == 2048 and r["ok"] and r["source_images"] == ["a"]

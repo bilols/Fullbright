@@ -18,6 +18,7 @@ from mm_mcp.preview import render_preview_sweep as _render_preview_sweep
 from mm_mcp.doctor import run_check
 from mm_mcp.inspect import inspect_ptex
 from mm_mcp.idle import IdleWatchdog
+from fullbright import tools as fb_tools
 
 # Startup is lazy: importing this module must NOT validate config or build the
 # catalog, so `mm-mcp --check` / `--version` work even when config is broken
@@ -608,6 +609,48 @@ def live_load(graph: dict | None = None, path: str | None = None) -> dict:
     return {"ok": result.ok, "error": result.error, "data": result.data}
 
 
+# --- Fullbright tools (logic lives in src/fullbright/tools.py) ---------------
+
+def retro_process(basename: str, size: int = 256, palette: str = "quake",
+                  targets: str = fb_tools.DEFAULT_TARGETS,
+                  emission_threshold: float = 0.1, roughness_levels: int = 8,
+                  normal_strength: float = 1.0) -> dict:
+    cfg, _ = _ensure_ready()
+    return fb_tools.retro_process(os.path.abspath(cfg.output_dir), basename, size=size,
+                                  palette=palette, targets=targets,
+                                  emission_threshold=emission_threshold,
+                                  roughness_levels=roughness_levels,
+                                  normal_strength=normal_strength)
+
+
+retro_process.__doc__ = (fb_tools.retro_process.__doc__.replace(
+    "Reads `<output_dir>/", "Reads `MM_OUTPUT_DIR/").replace(
+    "`<output_dir>/retro", "`MM_OUTPUT_DIR/retro"))
+
+
+def render_retro(ptex: dict, basename: str = "material", size: int = 256,
+                 palette: str = "quake", targets: str = fb_tools.DEFAULT_TARGETS,
+                 emission_threshold: float = 0.1, roughness_levels: int = 8,
+                 normal_strength: float = 1.0) -> dict:
+    """One call from graph to retro textures: render_graph at the full 2048
+    bake (validating first, same as render_graph), then retro_process the
+    maps down to `size` with the given palette.
+
+    Use this as the default render for retro work; the plain render_graph
+    smooths with Lanczos when asked for a small size. Wire anything that
+    should glow into the Material node's emission input (port 3): that is
+    the only way pixels get the palette's fullbright colors.
+
+    Returns retro_process's result plus `source_images` (the 2048 maps). On
+    failure, {ok: False, stage: "render" | "retro", error, ...}."""
+    cfg, _ = _ensure_ready()
+    return fb_tools.render_retro(render_graph, os.path.abspath(cfg.output_dir), ptex,
+                                 basename=basename, size=size, palette=palette,
+                                 targets=targets, emission_threshold=emission_threshold,
+                                 roughness_levels=roughness_levels,
+                                 normal_strength=normal_strength)
+
+
 # Register the plain functions as MCP tools.
 mcp.tool()(list_node_types)
 mcp.tool()(describe_node)
@@ -627,6 +670,8 @@ mcp.tool()(live_render)
 mcp.tool()(live_render_node_output)
 mcp.tool()(live_clear)
 mcp.tool()(live_load)
+mcp.tool()(retro_process)
+mcp.tool()(render_retro)
 
 
 @mcp.resource("catalog://nodes")
