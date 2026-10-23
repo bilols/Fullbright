@@ -279,7 +279,7 @@ but is not the right default for every client.
 
 ## Tools
 
-The server exposes 14 batch-mode tools and two resources (plus 7 more in Live mode, below):
+The server exposes 16 batch-mode tools and two resources (plus 7 more in Live mode, below):
 
 | Tool | What it does |
 |---|---|
@@ -296,6 +296,8 @@ The server exposes 14 batch-mode tools and two resources (plus 7 more in Live mo
 | `inspect_project` | Read-only metrics for a `.ptex` on disk (hash, node/connection counts, type histogram, material outputs) |
 | `retro_process` | Fullbright: turn already-rendered 2048 maps into palette-locked retro textures (box downscale, palette snap, fullbright emission, cutout alpha) packed for Godot, Unity URP and Blender |
 | `render_retro` | Fullbright: `render_graph` at the full bake, then `retro_process`, in one call |
+| `kit_build` | Fullbright kit: build a texture family drawn in code (built-in examples or your own package, see [docs/KIT.md](docs/KIT.md)) and deliver palette-locked `T_<ID>_<res>_BC/N/MS/E` files with seam and joint checks and a review sheet |
+| `kit_deliver_bake` | Fullbright kit: the same delivery files and checks, from a Material Maker 2048 bake |
 | `make_seamless` | Fullbright: make a source image tile (half-offset crossfade) before it goes into an `image` node; reports the seam before and after |
 
 Resource `catalog://nodes` exposes the full node catalog. Resource

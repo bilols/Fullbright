@@ -111,6 +111,8 @@ _ALL_TOOL_NAMES = [
     "retro_process",
     "render_retro",
     "make_seamless",
+    "kit_build",
+    "kit_deliver_bake",
 ]
 
 
@@ -201,6 +203,9 @@ def test_every_registered_tool_touches_idle_watchdog(monkeypatch, tmp_path):
         "render_retro": lambda: server.render_retro(invalid_ptex),
         # Missing file: returns an error as data.
         "make_seamless": lambda: server.make_seamless(str(tmp_path / "missing.png")),
+        # Unknown family / missing bake: both return an error as data.
+        "kit_build": lambda: server.kit_build("NOT_A_FAMILY"),
+        "kit_deliver_bake": lambda: server.kit_deliver_bake("missing", "X"),
     }
 
     assert set(calls) == set(_ALL_TOOL_NAMES), (

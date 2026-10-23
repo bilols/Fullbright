@@ -105,3 +105,90 @@ def make_seamless(path: str, out_path: str = "", band: float = 0.15) -> dict:
         return seamless.make_seamless(path, out_path or None, band)
     except (OSError, ValueError) as exc:
         return {"ok": False, "error": str(exc)}
+
+
+# --- Kit: texture families built in code -------------------------------------
+
+def _kit_finish(maps, art_id, out_root, colours, kind, dither, resolutions=(512, 256)):
+    from fullbright.kit import checks, deliver
+    r = deliver.deliver(maps, art_id, out_root, colours=colours, dither=dither, resolutions=resolutions)
+    res = checks.run(art_id, r.pop("bc512"), r.pop("bc256"), height=maps.get("height"),
+                     kind=kind, out_dir=f"{out_root}/{art_id}/checks")
+    sheet = checks.review_sheet(art_id, out_root, f"{out_root}/{art_id}/{art_id}_review.png", label=art_id,
+                                res=resolutions[0])
+    return {**r, "checks": res, "review_sheet": sheet}
+
+
+def kit_build(output_dir: str, family: str, variants: str = "all", bases_dir: str = "",
+              family_path=(), family_packages=()) -> dict:
+    """Build a texture family (a module that draws a tiling material in code)
+    and deliver each variant as palette-locked BC / N / MS / E files.
+
+    family: a family ID. Built-in examples are EXAMPLE_PANEL_WALL and
+    EXAMPLE_DECK_FLOOR; your own families come from the packages named in
+    MM_FAMILY_PACKAGES (importable from MM_FAMILY_PATH); see docs/KIT.md.
+    variants: "all" or a comma list such as "R1,R3". bases_dir: optional
+    folder of grayscale base textures the family layers in (default:
+    `sources/bases` beside the output folder); missing bases fall back to
+    procedural stand-ins.
+
+    Writes `<output_dir>/art_delivery/<ID>_<variant>/<hi>|<lo>/T_<ID>_<variant>_<res>_<BC|N|MS|E>.png`
+    (512 and 256 unless the family sets RES), check previews in `.../checks/`,
+    and a review sheet `<ID>_<variant>_review.png` (BC | N | MS | E | offset | tall wall).
+    Returns {ok, results: [{art_id, files, checks: {passed, seams, joints, notes}, review_sheet}]}.
+    """
+    import importlib
+    from pathlib import Path
+    from fullbright.kit import registry
+    try:
+        fams = registry.families(family_path, family_packages)
+        if family not in fams:
+            raise ValueError(f"no family {family}; known: {sorted(fams)}")
+        mod = importlib.import_module(fams[family])
+        names = list(mod.VARIANTS) if variants == "all" else [v.strip() for v in variants.split(",")]
+        bad = [v for v in names if v not in mod.VARIANTS]
+        if bad:
+            raise ValueError(f"unknown variant(s) {bad}; {family} has {list(mod.VARIANTS)}")
+        out_root = f"{output_dir}/art_delivery"
+        bases = bases_dir or str(Path(output_dir).parent / "sources" / "bases")
+        dither = getattr(mod, "DITHER", 0.0)  # a number, or {variant: number}
+        results = [_kit_finish(mod.build(v, base_dir=bases), f"{mod.ART_ID}_{v}", out_root,
+                               getattr(mod, "COLOURS", None), mod.KIND,
+                               dither.get(v, 0.0) if isinstance(dither, dict) else dither,
+                               getattr(mod, "RES", (512, 256))) for v in names]
+        return {"ok": all(r["ok"] for r in results), "results": results}
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def kit_deliver_bake(output_dir: str, basename: str, art_id: str, colours: str = "",
+                     kind: str = "four_edge", dither: float = 0.0) -> dict:
+    """Turn a Material Maker 2048 bake (render_graph output in MM_OUTPUT_DIR:
+    `<basename>_albedo`, `_normal`, `_orm`, optional `_emission` and
+    `_heightmap`) into a delivery set for `art_id`, the same files and checks
+    as kit_build.
+
+    colours: comma list of allowed palette hex colours for the base colour
+    (e.g. "5b5b7f,474767"), or "" for the whole palette. kind: wall | floor |
+    ceiling | four_edge | trim | single (which seam and joint checks apply).
+    dither: as retro_process.
+    """
+    import numpy as np
+    from PIL import Image
+    from pathlib import Path
+    try:
+        src = Path(output_dir)
+        load = lambda n, mode: np.asarray(Image.open(src / f"{basename}_{n}.png").convert(mode),
+                                          dtype=np.float64) / 255
+        orm = load("orm", "RGB")
+        maps = {"albedo": load("albedo", "RGB"), "normal": load("normal", "RGB"),
+                "ao": orm[..., 0], "roughness": orm[..., 1], "metallic": orm[..., 2]}
+        if (src / f"{basename}_emission.png").exists():
+            maps["emission"] = load("emission", "L")
+        if (src / f"{basename}_heightmap.png").exists():
+            maps["height"] = load("heightmap", "L")
+        cols = [c.strip() for c in colours.split(",") if c.strip()] or None
+        return {"ok": True, "results": [_kit_finish(maps, art_id, f"{output_dir}/art_delivery",
+                                                    cols, kind, dither)]}
+    except (OSError, ValueError, KeyError) as exc:
+        return {"ok": False, "error": str(exc)}

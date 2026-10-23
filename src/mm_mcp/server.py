@@ -671,6 +671,35 @@ def make_seamless(path: str, out_path: str = "", band: float = 0.15) -> dict:
 make_seamless.__doc__ = fb_tools.make_seamless.__doc__
 
 
+def kit_build(family: str, variants: str = "all", bases_dir: str = "") -> dict:
+    cfg, _ = _ensure_ready()
+    if bases_dir:
+        try:
+            ensure_within_roots(bases_dir, cfg.allowed_roots)
+        except PathNotAllowed as exc:
+            return {"ok": False, "error": str(exc)}
+    return fb_tools.kit_build(os.path.abspath(cfg.output_dir), family, variants, bases_dir,
+                              cfg.family_path, cfg.family_packages)
+
+
+kit_build.__doc__ = fb_tools.kit_build.__doc__.replace("`<output_dir>/art_delivery", "`MM_OUTPUT_DIR/art_delivery")
+
+
+def kit_deliver_bake(basename: str, art_id: str, colours: str = "",
+                     kind: str = "four_edge", dither: float = 0.0) -> dict:
+    cfg, _ = _ensure_ready()
+    try:
+        reject_path_fragment(basename)
+        reject_path_fragment(art_id)
+    except PathNotAllowed as exc:
+        return {"ok": False, "error": str(exc)}
+    return fb_tools.kit_deliver_bake(os.path.abspath(cfg.output_dir), basename, art_id,
+                                     colours, kind, dither)
+
+
+kit_deliver_bake.__doc__ = fb_tools.kit_deliver_bake.__doc__
+
+
 # Register the plain functions as MCP tools.
 mcp.tool()(list_node_types)
 mcp.tool()(describe_node)
@@ -693,6 +722,8 @@ mcp.tool()(live_load)
 mcp.tool()(retro_process)
 mcp.tool()(render_retro)
 mcp.tool()(make_seamless)
+mcp.tool()(kit_build)
+mcp.tool()(kit_deliver_bake)
 
 
 @mcp.resource("catalog://nodes")

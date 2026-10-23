@@ -18,6 +18,8 @@ _DEFAULTS = {
     "MM_COOKBOOK_DIR": "",
     "MM_PLAY_PORT": "8788",
     "MM_IDLE_EXIT_MINUTES": "0",
+    "MM_FAMILY_PATH": "",
+    "MM_FAMILY_PACKAGES": "",
 }
 
 
@@ -41,6 +43,8 @@ class Config:
     cookbook_dir: str = ""
     play_port: int = 8788
     idle_exit_minutes: int = 0
+    family_path: tuple = ()
+    family_packages: tuple = ()
 
 
 def _resolve_console(godot_binary: str) -> str:
@@ -131,4 +135,6 @@ def load_config(overrides: dict | None = None) -> Config:
         cookbook_dir=cookbook_dir,
         play_port=play_port,
         idle_exit_minutes=idle_exit_minutes,
+        family_path=tuple(p for p in env["MM_FAMILY_PATH"].split(os.pathsep) if p),
+        family_packages=tuple(p.strip() for p in env["MM_FAMILY_PACKAGES"].split(",") if p.strip()),
     )
